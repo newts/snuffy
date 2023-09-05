@@ -14,6 +14,19 @@ const char *password = "DECEMBERISTS";
 WebServer server(80);
 
 
+#define NUM_DATA 100
+
+int CO2[NUM_DATA];
+int temperature[NUM_DATA];
+byte humidity[NUM_DATA];
+int num_data = 0;
+int first_data = 0;
+
+int lCO2 = 0;
+int ltemperature = 0;
+byte lhumidity = 0;
+
+
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
@@ -22,7 +35,6 @@ Adafruit_SCD30  scd30;
 
 
 void handleRoot() {
-  digitalWrite(LED_BUILTIN, 1);
   char temp[400];
   int sec = millis() / 1000;
   int min = sec / 60;
@@ -39,20 +51,19 @@ void handleRoot() {
     </style>\
   </head>\
   <body>\
-    <h1>Hello from ESP32!</h1>\
+    <h1>snuffy</h1>\
     <p>Uptime: %02d:%02d:%02d</p>\
+        <p>%04d PPM %02dC %02d%%</p>\
     <img src=\"/test.svg\" />\
   </body>\
 </html>",
 
-           hr, min % 60, sec % 60
+           hr, min % 60, sec % 60, lCO2, ltemperature, lhumidity
           );
   server.send(200, "text/html", temp);
-  digitalWrite(LED_BUILTIN, 0);
 }
 
 void handleNotFound() {
-  digitalWrite(LED_BUILTIN, 1);
   String message = "File Not Found\n\n";
   message += "URI: ";
   message += server.uri();
@@ -67,15 +78,12 @@ void handleNotFound() {
   }
 
   server.send(404, "text/plain", message);
-  digitalWrite(LED_BUILTIN, 0);
 }
 
 
 
 
 void setup(void) {
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, 0);
   Serial.begin(115200);
   
   //while (!Serial) 
@@ -149,20 +157,35 @@ void setup(void) {
 
 
 void loop() {
-  if (scd30.dataReady()) {
+  while (scd30.dataReady()) {
     display.clearDisplay();
     display.setCursor(0,0);
     display.setTextSize(2);
 
-    Serial.println("Data available!");
+    Serial.println("\nData available!");
 
     if (!scd30.read()){
       Serial.println("Error reading sensor data");
       display.println("READ ERR");
       display.display();
-      return;
+      break;
     }
 
+    int data_index = (first_data + num_data) % NUM_DATA;
+    lCO2 = CO2[data_index] = scd30.CO2;
+    ltemperature = temperature[data_index] = scd30.temperature;
+    lhumidity = humidity[data_index] = scd30.relative_humidity;
+
+    // stash the data for the graph
+    //
+    if (num_data < NUM_DATA) {
+      num_data++;
+    }
+    else if (++first_data >= NUM_DATA) {
+      first_data = 0;
+    }
+
+    
     Serial.print("CO2: ");
     Serial.print(scd30.CO2, 3);
     Serial.print(" PPM ");
@@ -188,18 +211,31 @@ void loop() {
   delay(10);
 }
 
+#define GRAPH_WIDTH 390
+#define GRAPH_HEIGHT 140
+#define Y_HEIGHT (GRAPH_HEIGHT-10)
+#define GRAPH_X_STEP (1 + (GRAPH_WIDTH / NUM_DATA))
 void drawGraph() {
+  double ymax = 1.0;
+  for (int i=0; i < num_data; i++) if (CO2[i] > ymax) ymax = CO2[i];
+  double yscale = ((double) Y_HEIGHT) / ymax;
+  
   String out = "";
   char temp[100];
   out += "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"400\" height=\"150\">\n";
   out += "<rect width=\"400\" height=\"150\" fill=\"rgb(250, 230, 210)\" stroke-width=\"1\" stroke=\"rgb(0, 0, 0)\" />\n";
   out += "<g stroke=\"black\">\n";
-  int y = rand() % 130;
-  for (int x = 10; x < 390; x += 10) {
-    int y2 = rand() % 130;
-    sprintf(temp, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke-width=\"1\" />\n", x, 140 - y, x + 10, 140 - y2);
-    out += temp;
-    y = y2;
+
+  if (num_data > 2) {
+    int y = CO2[first_data] * yscale;
+    for (int i = 0; i < num_data; i++) {
+      int x = i * GRAPH_X_STEP;
+      int y2 = CO2[(first_data+i) % NUM_DATA] * yscale;
+      // Serial.print(x); Serial.print(','); Serial.println(y2);
+      sprintf(temp, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke-width=\"1\" />\n", x, Y_HEIGHT - y, x + GRAPH_X_STEP, Y_HEIGHT - y2);
+      out += temp;
+      y = y2;
+    }
   }
   out += "</g>\n</svg>\n";
 
