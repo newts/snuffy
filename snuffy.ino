@@ -8,8 +8,11 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 
-const char *ssid = "NEWTS";
-const char *password = "DECEMBERISTS";
+// define your AP in mywifi.h
+#include "mywifi.h"
+
+const char *ssid = MY_SSID;
+const char *password = MY_PASSWORD;
 
 WebServer server(80);
 
