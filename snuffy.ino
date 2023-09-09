@@ -40,36 +40,36 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 Adafruit_SCD30  scd30;
 
 
+#define TEMPSIZE 600
 void handleRoot() {
-  char temp[600];
+  char temp[TEMPSIZE];
   int sec = millis() / 1000;
   int min = sec / 60;
   int hr = min / 60;
 
-  snprintf(temp, 400,
-
-           "<html>\
-  <head>\
-    <meta http-equiv='refresh' content='5'/>\
-    <title>ESP32 Demo</title>\
-    <style>\
-      body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
-    </style>\
-  </head>\
-  <body>\
-    <h1>snuffy</h1>\
+  snprintf(temp, TEMPSIZE,
+"<html>\
+<head>\
+<meta http-equiv='refresh' content='5'/>\
+<title>snuffy</title>\
+<style>\
+body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
+</style>\
+</head>\
+<body>\
+<h1>snuffy</h1>\
 <table>\
 <tr>\
-<td>Uptime: %02d:%02d:%02d/td>\
+<td>Uptime: %02d:%02d:%02d</td>\
 </tr>\
 <tr>\
-<td>%04d PPM %02dC %02d%%</td>\
+<td>%4d PPM %2dC %02d%%</td>\
 </tr>\
 <tr>\
 <td><img src=\"/co2.svg\" /></td>\
 <td><div style=\"text-align: left;\"> \
-<span style=\"vertical-align: top;\">%5d</span>\
-<span style=\"vertical-align: bottom;\">%4d</span>\
+<p style=\"vertical-align: top;\">%5d</p>\
+<p style=\"vertical-align: bottom;\">%4d</p>\
 </div></td>\
 </tr>\
 </body>\
@@ -96,8 +96,6 @@ void handleNotFound() {
 
   server.send(404, "text/plain", message);
 }
-
-
 
 
 void setup(void) {
@@ -248,7 +246,7 @@ void drawGraph() {
   double yscale = ((double) Y_HEIGHT) / ymax;
   
   String out = "";
-  char temp[100];
+  char temps[100];
   out += "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"400\" height=\"150\">\n";
   out += "<rect width=\"400\" height=\"150\" fill=\"rgb(250, 230, 210)\" stroke-width=\"1\" stroke=\"rgb(0, 0, 0)\" />\n";
   out += "<g stroke=\"black\">\n";
@@ -259,8 +257,8 @@ void drawGraph() {
       int x = i * GRAPH_X_STEP;
       int y2 = CO2[(first_data+i) % NUM_DATA] * yscale;
       // Serial.print(x); Serial.print(','); Serial.println(y2);
-      sprintf(temp, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke-width=\"1\" />\n", x, Y_HEIGHT - y, x + GRAPH_X_STEP, Y_HEIGHT - y2);
-      out += temp;
+      sprintf(temps, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke-width=\"1\" />\n", x, Y_HEIGHT - y, x + GRAPH_X_STEP, Y_HEIGHT - y2);
+      out += temps;
       y = y2;
     }
   }
