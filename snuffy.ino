@@ -17,7 +17,10 @@ const char *password = MY_PASSWORD;
 WebServer server(80);
 
 
-#define NUM_DATA 100
+#define NUM_DATA 200
+
+double ymax = 1.0;   // small number
+double ymin = 88888; // large number
 
 int CO2[NUM_DATA];
 int temperature[NUM_DATA];
@@ -38,7 +41,7 @@ Adafruit_SCD30  scd30;
 
 
 void handleRoot() {
-  char temp[400];
+  char temp[600];
   int sec = millis() / 1000;
   int min = sec / 60;
   int hr = min / 60;
@@ -55,13 +58,24 @@ void handleRoot() {
   </head>\
   <body>\
     <h1>snuffy</h1>\
-    <p>Uptime: %02d:%02d:%02d</p>\
-        <p>%04d PPM %02dC %02d%%</p>\
-    <img src=\"/test.svg\" />\
-  </body>\
+<table>\
+<tr>\
+<td>Uptime: %02d:%02d:%02d/td>\
+</tr>\
+<tr>\
+<td>%04d PPM %02dC %02d%%</td>\
+</tr>\
+<tr>\
+<td><img src=\"/co2.svg\" /></td>\
+<td><div style=\"text-align: left;\"> \
+<span style=\"vertical-align: top;\">%5d</span>\
+<span style=\"vertical-align: bottom;\">%4d</span>\
+</div></td>\
+</tr>\
+</body>\
 </html>",
 
-           hr, min % 60, sec % 60, lCO2, ltemperature, lhumidity
+           hr, min % 60, sec % 60, lCO2, ltemperature, lhumidity, int(ymax), int(ymin)
           );
   server.send(200, "text/html", temp);
 }
@@ -89,15 +103,21 @@ void handleNotFound() {
 void setup(void) {
   Serial.begin(115200);
   
-  //while (!Serial) 
-  delay(1000);     // will pause serial console opens
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false, false)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    // for(;;); // Don't proceed, loop forever
+  }
+  delay(2000);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.println("");
 
   // Wait for connection
+  int timeout = 20;
   while (WiFi.status() != WL_CONNECTED) {
+    if (--timeout >= 0) break;
     delay(500);
     Serial.print(".");
   }
@@ -112,9 +132,9 @@ void setup(void) {
     Serial.println("MDNS responder started");
   }
   server.on("/", handleRoot);
-  server.on("/test.svg", drawGraph);
+  server.on("/co2.svg", drawGraph);
   server.on("/inline", []() {
-    server.send(200, "text/plain", "this works as well");
+    server.send(200, "text/plain", "well howdy");
   });
   server.onNotFound(handleNotFound);
   server.begin();
@@ -127,12 +147,6 @@ void setup(void) {
   Serial.println("SCD30 CO2 meter");
   delay(1000);
 
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false, false)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
-  delay(2000);
   
   // Try to initialize!
   if (!scd30.begin()) {
@@ -159,6 +173,9 @@ void setup(void) {
 }
 
 
+unsigned int readings = 0;
+#define READING 4
+
 void loop() {
   while (scd30.dataReady()) {
     display.clearDisplay();
@@ -179,15 +196,16 @@ void loop() {
     ltemperature = temperature[data_index] = scd30.temperature;
     lhumidity = humidity[data_index] = scd30.relative_humidity;
 
-    // stash the data for the graph
-    //
-    if (num_data < NUM_DATA) {
-      num_data++;
+    if ((++readings % READING) == 0) {
+      // stash the data for the graph
+      //
+      if (num_data < NUM_DATA) {
+        num_data++;
+      }
+      else if (++first_data >= NUM_DATA) {
+        first_data = 0;
+      }
     }
-    else if (++first_data >= NUM_DATA) {
-      first_data = 0;
-    }
-
     
     Serial.print("CO2: ");
     Serial.print(scd30.CO2, 3);
@@ -214,13 +232,19 @@ void loop() {
   delay(10);
 }
 
-#define GRAPH_WIDTH 390
-#define GRAPH_HEIGHT 140
+#define GRAPH_WIDTH 400
+#define GRAPH_HEIGHT 160
 #define Y_HEIGHT (GRAPH_HEIGHT-10)
 #define GRAPH_X_STEP (1 + (GRAPH_WIDTH / NUM_DATA))
+
+
 void drawGraph() {
-  double ymax = 1.0;
-  for (int i=0; i < num_data; i++) if (CO2[i] > ymax) ymax = CO2[i];
+  if (num_data > 2) {
+    for (int i=0; i < num_data; i++) {
+      if (CO2[i] > ymax) ymax = CO2[i];
+      if (CO2[i] < ymin) ymin = CO2[i];
+    }
+  }
   double yscale = ((double) Y_HEIGHT) / ymax;
   
   String out = "";
