@@ -58,23 +58,11 @@ body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Col
 </head>\
 <body>\
 <h1>snuffy</h1>\
-<table>\
-<tr>\
-<td>Uptime: %02d:%02d:%02d</td>\
-</tr>\
-<tr>\
-<td>%4d PPM %2dC %02d%%</td>\
-</tr>\
-<tr>\
-<td><img src=\"/co2.svg\" /></td>\
-<td><div style=\"text-align: left;\"> \
-<p style=\"vertical-align: top;\">%5d</p>\
-<p style=\"vertical-align: bottom;\">%4d</p>\
-</div></td>\
-</tr>\
+<p>Uptime: %02d:%02d:%02d</p>\
+<p>%4d PPM %2dC %02d%%</p>\
+<img src=\"/co2.svg\" />\
 </body>\
 </html>",
-
            hr, min % 60, sec % 60, lCO2, ltemperature, lhumidity, int(ymax), int(ymin)
           );
   server.send(200, "text/html", temp);
@@ -115,7 +103,7 @@ void setup(void) {
   // Wait for connection
   int timeout = 20;
   while (WiFi.status() != WL_CONNECTED) {
-    if (--timeout >= 0) break;
+    if (--timeout <= 0) break;
     delay(500);
     Serial.print(".");
   }
@@ -172,7 +160,7 @@ void setup(void) {
 
 
 unsigned int readings = 0;
-#define READING 4
+#define READING 2
 
 void loop() {
   while (scd30.dataReady()) {
@@ -189,6 +177,8 @@ void loop() {
       break;
     }
 
+    Serial.println(first_data);
+    Serial.println(num_data);
     int data_index = (first_data + num_data) % NUM_DATA;
     lCO2 = CO2[data_index] = scd30.CO2;
     ltemperature = temperature[data_index] = scd30.temperature;
@@ -237,6 +227,7 @@ void loop() {
 
 
 void drawGraph() {
+  Serial.print("dg ");
   if (num_data > 2) {
     for (int i=0; i < num_data; i++) {
       if (CO2[i] > ymax) ymax = CO2[i];
@@ -244,11 +235,12 @@ void drawGraph() {
     }
   }
   double yscale = ((double) Y_HEIGHT) / ymax;
-  
+
+    Serial.println(yscale);
   String out = "";
   char temps[100];
   out += "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"400\" height=\"150\">\n";
-  out += "<rect width=\"400\" height=\"150\" fill=\"rgb(250, 230, 210)\" stroke-width=\"1\" stroke=\"rgb(0, 0, 0)\" />\n";
+  out += "<rect width=\"400\" height=\"160\" fill=\"rgb(250, 230, 210)\" stroke-width=\"1\" stroke=\"rgb(0, 0, 0)\" />\n";
   out += "<g stroke=\"black\">\n";
 
   if (num_data > 2) {
@@ -262,7 +254,17 @@ void drawGraph() {
       y = y2;
     }
   }
-  out += "</g>\n</svg>\n";
+  
+  out += "</g>\n";
+  out += "<style> .Rrrrr {\
+      font: 16px serif;\
+      fill: red;\
+    } </style>";
+    sprintf(temps, "<text x=\"360\" y=\"14\" class=\"Rrrrr\">%d</text>\n", int(ymax));
+    out += temps;
+    sprintf(temps, "<text x=\"360\" y=\"144\" class=\"Rrrrr\">%d</text>\n", int(ymin));
+    out += temps;
+  out += "</svg>\n";
 
   server.send(200, "image/svg+xml", out);
 }
