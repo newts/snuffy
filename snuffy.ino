@@ -88,6 +88,13 @@ void handleNotFound() {
 
 void setup(void) {
   Serial.begin(115200);
+  // Start I2C Communication SDA = 5 and SCL = 4 on Wemos Lolin32
+  //
+  Wire.begin(5, 4);
+  
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.println("");
   
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false, false)) {
@@ -95,10 +102,14 @@ void setup(void) {
     // for(;;); // Don't proceed, loop forever
   }
   delay(2000);
+    display.display();
+  delay(500); // Pause for half second
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.println("");
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setRotation(0);
+
+
 
   // Wait for connection
   int timeout = 20;
@@ -125,10 +136,6 @@ void setup(void) {
   server.onNotFound(handleNotFound);
   server.begin();
   Serial.println("HTTP server started");
-  
-  // Start I2C Communication SDA = 5 and SCL = 4 on Wemos Lolin32
-  //
-  Wire.begin(5, 4);
 
   Serial.println("SCD30 CO2 meter");
   delay(1000);
@@ -149,13 +156,6 @@ void setup(void) {
   Serial.print("Measurement Interval: "); 
   Serial.print(scd30.getMeasurementInterval()); 
   Serial.println(" seconds");
-  
-  display.display();
-  delay(500); // Pause for half second
-
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setRotation(0);
 }
 
 
