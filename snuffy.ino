@@ -68,6 +68,14 @@ body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Col
   server.send(200, "text/html", temp);
 }
 
+#define MSG_SIZE 30
+void getReading() {
+  char message[MSG_SIZE];
+
+  snprintf(message, MSG_SIZE, "{\"co2\": %d}", lCO2);
+  server.send(200, "application/json", message);
+}
+
 void handleNotFound() {
   String message = "File Not Found\n\n";
   message += "URI: ";
@@ -130,6 +138,7 @@ void setup(void) {
   }
   server.on("/", handleRoot);
   server.on("/co2.svg", drawGraph);
+  server.on("/co2", getReading);
   server.on("/inline", []() {
     server.send(200, "text/plain", "well howdy");
   });
@@ -234,9 +243,9 @@ void drawGraph() {
       if (CO2[i] < ymin) ymin = CO2[i];
     }
   }
-  double yscale = ((double) Y_HEIGHT) / ymax;
+  double yscale = ((double) Y_HEIGHT) / (ymax-ymin);
 
-    Serial.println(yscale);
+  Serial.println(yscale);
   String out = "";
   char temps[100];
   out += "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"400\" height=\"150\">\n";
@@ -247,7 +256,7 @@ void drawGraph() {
     int y = CO2[first_data] * yscale;
     for (int i = 0; i < num_data; i++) {
       int x = i * GRAPH_X_STEP;
-      int y2 = CO2[(first_data+i) % NUM_DATA] * yscale;
+      int y2 = (CO2[(first_data+i) % NUM_DATA] - ymin) * yscale;
       // Serial.print(x); Serial.print(','); Serial.println(y2);
       sprintf(temps, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke-width=\"1\" />\n", x, Y_HEIGHT - y, x + GRAPH_X_STEP, Y_HEIGHT - y2);
       out += temps;
