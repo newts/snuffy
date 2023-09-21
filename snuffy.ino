@@ -68,11 +68,11 @@ body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Col
   server.send(200, "text/html", temp);
 }
 
-#define MSG_SIZE 30
+#define MSG_SIZE 64
 void getReading() {
   char message[MSG_SIZE];
 
-  snprintf(message, MSG_SIZE, "{\"co2\": %d}", lCO2);
+  snprintf(message, MSG_SIZE, "{\"co2\":%d, \"temperature\":%d, \"humidity\":%d}", lCO2, ltemperature, lhumidity);
   server.send(200, "application/json", message);
 }
 
@@ -110,14 +110,12 @@ void setup(void) {
     // for(;;); // Don't proceed, loop forever
   }
   delay(2000);
-    display.display();
+  display.display();
   delay(500); // Pause for half second
 
   display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setRotation(0);
-
-
 
   // Wait for connection
   int timeout = 20;
@@ -169,7 +167,7 @@ void setup(void) {
 
 
 unsigned int readings = 0;
-#define READING 2
+#define SKIPS 4
 
 void loop() {
   while (scd30.dataReady()) {
@@ -193,7 +191,7 @@ void loop() {
     ltemperature = temperature[data_index] = scd30.temperature;
     lhumidity = humidity[data_index] = scd30.relative_humidity;
 
-    if ((++readings % READING) == 0) {
+    if ((++readings % SKIPS) == 0) {
       // stash the data for the graph
       //
       if (num_data < NUM_DATA) {
@@ -234,9 +232,7 @@ void loop() {
 #define Y_HEIGHT (GRAPH_HEIGHT-10)
 #define GRAPH_X_STEP (1 + (GRAPH_WIDTH / NUM_DATA))
 
-
 void drawGraph() {
-  Serial.print("dg ");
   if (num_data > 2) {
     for (int i=0; i < num_data; i++) {
       if (CO2[i] > ymax) ymax = CO2[i];
