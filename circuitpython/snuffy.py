@@ -49,42 +49,44 @@ print("Self-calibration enabled:", scd.self_calibration_enabled)
 # scd.ambient_pressure = 1100
 print("Ambient Pressure:", scd.ambient_pressure)
 
-# scd.altitude = 100
+scd.altitude = 60
 print("Altitude:", scd.altitude, "meters above sea level")
 
 # scd.forced_recalibration_reference = 409
 print("Forced recalibration reference:", scd.forced_recalibration_reference)
 print("")
+time.sleep(5)
 
-
-font_height = 10
-def clear():
-    # Draw a smaller inner rectangle
-    inner_bitmap = displayio.Bitmap(WIDTH - BORDER * 2, HEIGHT - BORDER * 2, 1)
-    inner_palette = displayio.Palette(1)
-    inner_palette[0] = 0x000000  # Black
-    inner_sprite = displayio.TileGrid(
-        inner_bitmap, pixel_shader=inner_palette, x=BORDER, y=BORDER
+font_height = 18
+# Draw a smaller inner rectangle
+inner_bitmap = displayio.Bitmap(WIDTH - BORDER * 2, HEIGHT - BORDER * 2, 1)
+inner_palette = displayio.Palette(1)
+inner_palette[0] = 0x000000  # Black
+inner_sprite = displayio.TileGrid(
+    inner_bitmap, pixel_shader=inner_palette, x=BORDER, y=BORDER
     )
-    splash.append(inner_sprite)
+splash.append(inner_sprite)
+    
+lbl_co2 = label.Label(terminalio.FONT, text="co2", color=0xFFFFFF, x=20, y=font_height * 1)
+splash.append(lbl_co2)
+lbl_temp = label.Label(terminalio.FONT, text="temp", color=0xFFFFFF, x=20, y=font_height * 2)
+splash.append(lbl_temp)
+lbl_humidity = label.Label(terminalio.FONT, text="hum", color=0xFFFFFF, x=20, y=font_height * 3)
+splash.append(lbl_humidity)
 
+def display_co2(lbl, val, unit):
+    lbl.text = str(int(val)) + unit
 
-font_height = 16
-def display_co2(line, val, unit):
-    text = str(int(val)) + unit
-    text_area = label.Label(terminalio.FONT, text=text, color=0xFFFFFF, x=20, y=font_height * line)
-    splash.append(text_area)
 
 while True:
     data = scd.data_available
     if data:
-        clear()
         print("CO2:", scd.CO2, "PPM")
-        display_co2(1, scd.CO2, " PPM")
+        display_co2(lbl_co2, scd.CO2, " PPM")
         print("Temperature:", scd.temperature, "degrees C")
-        display_co2(2, scd.temperature, " C")
+        display_co2(lbl_temp, scd.temperature, " C")
         print("Humidity::", scd.relative_humidity, "%%rH")
-        display_co2(3, scd.relative_humidity, " %")
+        display_co2(lbl_humidity, scd.relative_humidity, " %")
         print("")
 
 
