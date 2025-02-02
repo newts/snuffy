@@ -3,10 +3,10 @@
 
 #include <Adafruit_SCD30.h>
 #include <Adafruit_SSD1306.h>
+#include <Wire.h>
 #include <WiFi.h>
-#include <WiFiClient.h>
-#include <WebServer.h>
-#include <ESPmDNS.h>
+// #include <WiFiClient.h>
+// #include <WebServer.h>
 
 // define your AP in mywifi.h
 #include "mywifi.h"
@@ -98,7 +98,7 @@ void setup(void) {
   Serial.begin(115200);
   // Start I2C Communication SDA = 5 and SCL = 4 on Wemos Lolin32
   //
-  Wire.begin(5, 4);
+  Wire.begin(0, 1);
   
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
